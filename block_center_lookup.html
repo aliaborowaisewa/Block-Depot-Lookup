@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Block Lookup</title>
+<style>
+  :root{
+    --ink:#0f2a3d;
+    --slate:#4a6577;
+    --paper:#f3f6f7;
+    --line:#d7e0e3;
+    --teal:#0e6e6e;
+    --teal-dark:#0a5555;
+    --amber:#c97a2b;
+    --white:#ffffff;
+    --danger:#b3432f;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html, body{
+    width:100%;
+    overflow-x:hidden;
+  }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  header{
+    background:var(--ink);
+    color:var(--white);
+    padding:22px 20px 20px;
+    position:relative;
+  }
+  header .eyebrow{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#9fc4c4;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  header h1{
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .stripe{
+    height:4px;
+    background:linear-gradient(90deg,var(--teal),var(--amber));
+  }
+  main{
+    max-width:520px;
+    margin:0 auto;
+    padding:20px 16px;
+    width:100%;
+  }
+  @media (min-width: 720px){
+    main{
+      max-width:640px;
+      padding:28px 24px;
+    }
+  }
+  .search-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 1px 3px rgba(15,42,61,0.06);
+  }
+  .search-card label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--slate);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:8px;
+  }
+  .search-row{
+    display:flex;
+    gap:8px;
+    width:100%;
+    min-width:0;
+  }
+  #blockInput{
+    flex:1;
+    min-width:0;
+    font-size:22px;
+    font-weight:600;
+    padding:14px 14px;
+    border:2px solid var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    letter-spacing:0.02em;
+    -webkit-appearance:none;
+  }
+  #blockInput:focus{
+    outline:none;
+    border-color:var(--teal);
+  }
+  #searchBtn{
+    background:var(--teal);
+    color:var(--white);
+    border:none;
+    border-radius:10px;
+    padding:0 22px;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  #searchBtn:active{ background:var(--teal-dark); }
+
+  #result{
+    margin-top:16px;
+    min-height:8px;
+  }
+  .result-card{
+    border-radius:12px;
+    padding:16px;
+    animation:rise .18s ease-out;
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .result-found{
+    background:#eaf6f3;
+    border:1px solid #bfe3d9;
+  }
+  .result-missing{
+    background:#fbeeec;
+    border:1px solid #f0ccc4;
+  }
+  .result-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:700;
+    color:var(--slate);
+    margin-bottom:6px;
+  }
+  .result-center{
+    font-size:24px;
+    font-weight:800;
+    color:var(--teal-dark);
+  }
+  .result-missing .result-center{ color:var(--danger); font-size:17px; font-weight:700;}
+  .result-range{
+    font-size:13px;
+    color:var(--slate);
+    margin-top:4px;
+  }
+  .result-note{
+    font-size:13px;
+    color:var(--ink);
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px dashed #cfe0dc;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .phone-link{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background:var(--teal);
+    color:var(--white);
+    text-decoration:none;
+    font-size:15px;
+    font-weight:700;
+    padding:10px 14px;
+    border-radius:8px;
+    letter-spacing:.02em;
+  }
+  .phone-link:active{ background:var(--teal-dark); }
+  .phone-link.office{ background:var(--ink); }
+  .phone-plain{ font-size:13px; color:var(--slate); align-self:center; }
+
+  section.manage{
+    margin-top:22px;
+  }
+  .manage-toggle{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:10px 2px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--slate);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;
+  }
+  .manage-toggle .chev{
+    transition:transform .15s ease;
+    font-size:12px;
+  }
+  .manage-toggle.open .chev{ transform:rotate(90deg); }
+  .manage-body{
+    display:none;
+  }
+  .manage-body.open{ display:block; }
+
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-top:10px;
+  }
+  .card h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--slate);
+    margin:0 0 10px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .form-grid input, .full-input, textarea{
+    font-size:15px;
+    padding:10px 10px;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    color:var(--ink);
+    width:100%;
+    font-family:inherit;
+  }
+  .form-grid input:focus, .full-input:focus, textarea:focus{
+    outline:none;
+    border-color:var(--teal);
+  }
+  .span2{ grid-column:1/3; }
+  .add-btn{
+    margin-top:10px;
+    width:100%;
+    background:var(--ink);
+    color:var(--white);
+    border:none;
+    border-radius:8px;
+    padding:11px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  textarea{
+    resize:vertical;
+    min-height:70px;
+    font-size:13px;
+  }
+  .hint{
+    font-size:11.5px;
+    color:var(--slate);
+    margin-top:6px;
+    line-height:1.5;
+  }
+
+  .entry-list{
+    margin-top:10px;
+  }
+  .entry{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 4px;
+    border-bottom:1px solid var(--line);
+    gap:8px;
+    min-width:0;
+  }
+  .entry-info{
+    min-width:0;
+    overflow-wrap:break-word;
+  }
+  .entry:last-child{ border-bottom:none; }
+  .entry-info .rng{
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .entry-info .ctr{
+    font-size:12.5px;
+    color:var(--slate);
+  }
+  .entry-del{
+    background:none;
+    border:1px solid #e3c9c3;
+    color:var(--danger);
+    border-radius:7px;
+    padding:6px 10px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .empty-state{
+    font-size:13px;
+    color:var(--slate);
+    text-align:center;
+    padding:14px 0;
+  }
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--white);
+    padding:10px 18px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+    white-space:nowrap;
+  }
+  .app-footer{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--slate);
+    padding:18px 16px 8px;
+  }
+  .author-link{
+    color:var(--teal);
+    font-weight:700;
+    text-decoration:none;
+    border-bottom:1px solid rgba(14,110,110,.35);
+  }
+  .author-link:active{ color:var(--teal-dark); }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">DMA Block Reference</div>
+  <h1>Block → Depot</h1>
+</header>
+<div class="stripe"></div>
+
+<main>
+  <div class="search-card">
+    <label for="blockInput">Enter block number</label>
+    <div class="search-row">
+      <input id="blockInput" type="number" inputmode="numeric" placeholder="e.g. 214" autofocus>
+      <button id="searchBtn">Find</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <section class="manage">
+    <button class="manage-toggle" id="manageToggle">
+      <span>🔒 Manage block list</span>
+      <span class="chev">▶</span>
+    </button>
+
+    <div class="manage-body" id="manageBody">
+      <div class="card">
+        <h2>Add block range</h2>
+        <div class="form-grid">
+          <input id="fromBlock" type="number" inputmode="numeric" placeholder="From block">
+          <input id="toBlock" type="number" inputmode="numeric" placeholder="To block (optional)">
+          <input id="centerName" class="span2" type="text" placeholder="Depot name">
+          <input id="centerNote" class="span2" type="text" placeholder="Contact number(s)">
+          <input id="officeTel" class="span2" type="tel" placeholder="Office Tel">
+        </div>
+        <button class="add-btn" id="addBtn">Add to list</button>
+        <div class="hint">Leave "To block" empty for a single block number. Overlapping ranges will show a warning.</div>
+      </div>
+
+      <div class="card">
+        <h2>Bulk import</h2>
+        <textarea id="bulkInput" placeholder="One per line, e.g.&#10;101-150, Manama Depot, 39123456, 17123456&#10;151-180, Riffa Depot, 39223344, 17223344&#10;205, Isa Town Depot, 39334455"></textarea>
+        <button class="add-btn" id="bulkBtn">Import list</button>
+        <div class="hint">Format: start-end, depot name, contact number, office tel  (contact and office are optional; use / between multiple numbers)</div>
+      </div>
+
+      <div class="card">
+        <h2>Current list <span id="countLabel"></span></h2>
+        <div class="entry-list" id="entryList"></div>
+        <button class="add-btn" id="exportBtn" style="margin-top:14px;background:var(--teal);">Export backup (.json)</button>
+        <label class="add-btn" style="margin-top:8px;background:var(--slate);display:block;text-align:center;">
+          Import backup (.json)
+          <input type="file" id="importFile" accept="application/json" style="display:none;">
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>Security</h2>
+        <button class="add-btn" id="changePinBtn" style="background:var(--amber);">Change PIN</button>
+        <div class="hint">A PIN is required to open this Manage panel. If it's forgotten, clearing this browser's site data will reset it (your saved block list will also be lost unless you've exported a backup).</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  © 2026 WDD - Water Management · <a class="author-link" href="mailto:ali.jaafar@example.com">Ali Hasan Jaafar</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'block-center-map';
+let entries = [];
+
+async function loadEntries(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    entries = [];
+  }
+  renderEntryList();
+}
+
+async function saveEntries(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }catch(e){
+    showToast('Save failed — try again');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+function findCenter(num){
+  const matches = entries.filter(e => num >= e.start && num <= e.end);
+  return matches.length ? matches[0] : null;
+}
+
+function renderResult(num, entry){
+  const box = document.getElementById('result');
+  if(entry){
+    const rangeLabel = entry.start === entry.end ? `Block ${entry.start}` : `Blocks ${entry.start}–${entry.end}`;
+    box.innerHTML = `
+      <div class="result-card result-found">
+        <div class="result-label">Responsible depot</div>
+        <div class="result-center">${escapeHtml(entry.center)}</div>
+        <div class="result-range">${rangeLabel}</div>
+        ${(entry.note || entry.office) ? `<div class="result-note">${entry.note ? renderPhones(entry.note) : ''}${entry.office ? renderPhones(entry.office, '🏢 Office') : ''}</div>` : ''}
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="result-card result-missing">
+        <div class="result-label">No match</div>
+        <div class="result-center">Block ${num} isn't in your list yet</div>
+      </div>`;
+  }
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderPhones(note, label){
+  label = label || '📞';
+  return note.split(/[,/]+/)
+    .map(s => s.trim())
+    .filter(s => s.length)
+    .map(s => {
+      const dial = s.replace(/[^\d+]/g, '');
+      if(dial.length < 4) return `<span class="phone-plain">${escapeHtml(s)}</span>`;
+      return `<a class="phone-link${label==='🏢 Office'?' office':''}" href="tel:${dial}">${label} ${escapeHtml(s)}</a>`;
+    })
+    .join('');
+}
+
+function doSearch(){
+  const val = document.getElementById('blockInput').value.trim();
+  if(val === '') return;
+  const num = parseInt(val, 10);
+  if(isNaN(num)) return;
+  const entry = findCenter(num);
+  renderResult(num, entry);
+}
+
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('blockInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') doSearch();
+});
+document.getElementById('blockInput').addEventListener('input', ()=>{
+  const v = document.getElementById('blockInput').value.trim();
+  if(v === '') document.getElementById('result').innerHTML = '';
+});
+
+document.getElementById('manageToggle').addEventListener('click', async ()=>{
+  const body = document.getElementById('manageBody');
+  const btn = document.getElementById('manageToggle');
+  const isOpen = body.classList.contains('open');
+
+  if(isOpen){
+    // closing never requires a PIN
+    body.classList.remove('open');
+    btn.classList.remove('open');
+    return;
+  }
+
+  const unlocked = await requirePin();
+  if(!unlocked) return;
+
+  body.classList.add('open');
+  btn.classList.add('open');
+});
+
+async function hashPin(pin){
+  const enc = new TextEncoder().encode('depot-lock-' + pin);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function requirePin(){
+  const stored = localStorage.getItem('depot-lock-pin');
+
+  if(!stored){
+    const pin1 = prompt('Set a PIN to protect the Manage panel (4+ digits):');
+    if(pin1 === null || pin1.trim().length < 4){
+      if(pin1 !== null) showToast('PIN must be at least 4 characters');
+      return false;
+    }
+    const pin2 = prompt('Confirm your PIN:');
+    if(pin2 !== pin1){
+      showToast('PINs did not match — try again');
+      return false;
+    }
+    localStorage.setItem('depot-lock-pin', await hashPin(pin1));
+    showToast('PIN set');
+    return true;
+  }
+
+  const attempt = prompt('Enter PIN to manage the block list:');
+  if(attempt === null) return false;
+  const attemptHash = await hashPin(attempt);
+  if(attemptHash !== stored){
+    showToast('Incorrect PIN');
+    return false;
+  }
+  return true;
+}
+
+document.getElementById('changePinBtn').addEventListener('click', async ()=>{
+  const stored = localStorage.getItem('depot-lock-pin');
+  if(stored){
+    const current = prompt('Enter current PIN:');
+    if(current === null) return;
+    if(await hashPin(current) !== stored){
+      showToast('Incorrect current PIN');
+      return;
+    }
+  }
+  const pin1 = prompt('Enter new PIN (4+ digits):');
+  if(pin1 === null || pin1.trim().length < 4){
+    if(pin1 !== null) showToast('PIN must be at least 4 characters');
+    return;
+  }
+  const pin2 = prompt('Confirm new PIN:');
+  if(pin2 !== pin1){
+    showToast('PINs did not match');
+    return;
+  }
+  localStorage.setItem('depot-lock-pin', await hashPin(pin1));
+  showToast('PIN updated');
+});
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const from = parseInt(document.getElementById('fromBlock').value, 10);
+  const toRaw = document.getElementById('toBlock').value.trim();
+  const to = toRaw === '' ? from : parseInt(toRaw, 10);
+  const center = document.getElementById('centerName').value.trim();
+  const note = document.getElementById('centerNote').value.trim();
+  const office = document.getElementById('officeTel').value.trim();
+
+  if(isNaN(from) || isNaN(to) || !center){
+    showToast('Enter a block number and depot name');
+    return;
+  }
+  if(to < from){
+    showToast('"To block" must be ≥ "From block"');
+    return;
+  }
+
+  const overlap = entries.some(e => from <= e.end && to >= e.start);
+  entries.push({id: Date.now().toString(), start: from, end: to, center, note, office});
+  entries.sort((a,b)=> a.start - b.start);
+  await saveEntries();
+  renderEntryList();
+
+  document.getElementById('fromBlock').value = '';
+  document.getElementById('toBlock').value = '';
+  document.getElementById('centerName').value = '';
+  document.getElementById('centerNote').value = '';
+  document.getElementById('officeTel').value = '';
+
+  showToast(overlap ? 'Added — note: overlaps an existing range' : 'Added');
+});
+
+document.getElementById('bulkBtn').addEventListener('click', async ()=>{
+  const raw = document.getElementById('bulkInput').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length);
+  if(!lines.length){ showToast('Paste some lines first'); return; }
+
+  let added = 0, skipped = 0;
+  for(const line of lines){
+    const parts = line.split(',').map(p=>p.trim());
+    if(parts.length < 2){ skipped++; continue; }
+    const rangePart = parts[0];
+    const center = parts[1];
+    const note = parts[2] || '';
+    const office = parts[3] || '';
+    if(!center){ skipped++; continue; }
+
+    let start, end;
+    if(rangePart.includes('-')){
+      const [a,b] = rangePart.split('-').map(s=>parseInt(s.trim(),10));
+      start = a; end = b;
+    } else {
+      start = end = parseInt(rangePart, 10);
+    }
+    if(isNaN(start) || isNaN(end) || end < start){ skipped++; continue; }
+
+    entries.push({id: Date.now().toString()+Math.random().toString(36).slice(2,6), start, end, center, note, office});
+    added++;
+  }
+  entries.sort((a,b)=> a.start - b.start);
+  await saveEntries();
+  renderEntryList();
+  document.getElementById('bulkInput').value = '';
+  showToast(`Imported ${added} entr${added===1?'y':'ies'}${skipped ? `, skipped ${skipped}` : ''}`);
+});
+
+function renderEntryList(){
+  const list = document.getElementById('entryList');
+  document.getElementById('countLabel').textContent = entries.length ? `(${entries.length})` : '';
+  if(!entries.length){
+    list.innerHTML = `<div class="empty-state">No blocks added yet. Add one above or bulk import.</div>`;
+    return;
+  }
+  list.innerHTML = entries.map(e => {
+    const rangeLabel = e.start === e.end ? `Block ${e.start}` : `Blocks ${e.start}–${e.end}`;
+    return `
+      <div class="entry" data-id="${e.id}">
+        <div class="entry-info">
+          <div class="rng">${rangeLabel}</div>
+          <div class="ctr">${escapeHtml(e.center)}${e.note ? ` · 📞 ${escapeHtml(e.note)}` : ''}${e.office ? ` · 🏢 ${escapeHtml(e.office)}` : ''}</div>
+        </div>
+        <button class="entry-del" data-id="${e.id}">Remove</button>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.entry-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-id');
+      entries = entries.filter(e => e.id !== id);
+      await saveEntries();
+      renderEntryList();
+      showToast('Removed');
+    });
+  });
+}
+
+loadEntries();
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  if(!entries.length){ showToast('Nothing to export yet'); return; }
+  const blob = new Blob([JSON.stringify(entries, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'block-depot-list.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded');
+});
+
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    try{
+      const imported = JSON.parse(ev.target.result);
+      if(!Array.isArray(imported)) throw new Error('bad format');
+      entries = imported;
+      entries.sort((a,b)=> a.start - b.start);
+      await saveEntries();
+      renderEntryList();
+      showToast(`Restored ${entries.length} entries`);
+    }catch(err){
+      showToast('Could not read that file');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+</script>
+
+</body>
+</html>
