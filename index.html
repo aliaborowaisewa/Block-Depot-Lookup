@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block Lookup</title>
+<style>
+  :root{
+    --ink:#0f2a3d;
+    --slate:#4a6577;
+    --paper:#f3f6f7;
+    --line:#d7e0e3;
+    --teal:#0e6e6e;
+    --teal-dark:#0a5555;
+    --amber:#c97a2b;
+    --white:#ffffff;
+    --danger:#b3432f;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html, body{
+    width:100%;
+    overflow-x:hidden;
+  }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  header{
+    background:var(--ink);
+    color:var(--white);
+    padding:22px 20px 20px;
+    position:relative;
+  }
+  header .eyebrow{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#9fc4c4;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  header h1{
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .stripe{
+    height:4px;
+    background:linear-gradient(90deg,var(--teal),var(--amber));
+  }
+  main{
+    max-width:520px;
+    margin:0 auto;
+    padding:20px 16px;
+    width:100%;
+  }
+  @media (min-width: 720px){
+    main{
+      max-width:640px;
+      padding:28px 24px;
+    }
+  }
+  .search-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 1px 3px rgba(15,42,61,0.06);
+  }
+  .search-card label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--slate);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:8px;
+  }
+  .search-row{
+    display:flex;
+    gap:8px;
+    width:100%;
+    min-width:0;
+  }
+  #blockInput{
+    flex:1;
+    min-width:0;
+    font-size:22px;
+    font-weight:600;
+    padding:14px 14px;
+    border:2px solid var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    letter-spacing:0.02em;
+    -webkit-appearance:none;
+  }
+  #blockInput:focus{
+    outline:none;
+    border-color:var(--teal);
+  }
+  #searchBtn{
+    background:var(--teal);
+    color:var(--white);
+    border:none;
+    border-radius:10px;
+    padding:0 22px;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  #searchBtn:active{ background:var(--teal-dark); }
+
+  #result{
+    margin-top:16px;
+    min-height:8px;
+  }
+  .result-card{
+    border-radius:12px;
+    padding:16px;
+    animation:rise .18s ease-out;
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .result-found{
+    background:#eaf6f3;
+    border:1px solid #bfe3d9;
+  }
+  .result-missing{
+    background:#fbeeec;
+    border:1px solid #f0ccc4;
+  }
+  .result-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:700;
+    color:var(--slate);
+    margin-bottom:6px;
+  }
+  .result-center{
+    font-size:24px;
+    font-weight:800;
+    color:var(--teal-dark);
+  }
+  .result-missing .result-center{ color:var(--danger); font-size:17px; font-weight:700;}
+  .result-range{
+    font-size:13px;
+    color:var(--slate);
+    margin-top:4px;
+  }
+  .result-note{
+    font-size:13px;
+    color:var(--ink);
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px dashed #cfe0dc;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .phone-link{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background:var(--teal);
+    color:var(--white);
+    text-decoration:none;
+    font-size:15px;
+    font-weight:700;
+    padding:10px 14px;
+    border-radius:8px;
+    letter-spacing:.02em;
+  }
+  .phone-link:active{ background:var(--teal-dark); }
+  .phone-link.office{ background:var(--ink); }
+  .phone-plain{ font-size:13px; color:var(--slate); align-self:center; }
+
+  section.manage{
+    margin-top:22px;
+  }
+  .manage-toggle{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:10px 2px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--slate);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;
+  }
+  .manage-toggle .chev{
+    transition:transform .15s ease;
+    font-size:12px;
+  }
+  .manage-toggle.open .chev{ transform:rotate(90deg); }
+  .manage-body{
+    display:none;
+  }
+  .manage-body.open{ display:block; }
+
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-top:10px;
+  }
+  .card h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--slate);
+    margin:0 0 10px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .form-grid input, .full-input, textarea{
+    font-size:15px;
+    padding:10px 10px;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    color:var(--ink);
+    width:100%;
+    font-family:inherit;
+  }
+  .form-grid input:focus, .full-input:focus, textarea:focus{
+    outline:none;
+    border-color:var(--teal);
+  }
+  .span2{ grid-column:1/3; }
+  .add-btn{
+    margin-top:10px;
+    width:100%;
+    background:var(--ink);
+    color:var(--white);
+    border:none;
+    border-radius:8px;
+    padding:11px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  textarea{
+    resize:vertical;
+    min-height:70px;
+    font-size:13px;
+  }
+  .hint{
+    font-size:11.5px;
+    color:var(--slate);
+    margin-top:6px;
+    line-height:1.5;
+  }
+
+  .entry-list{
+    margin-top:10px;
+  }
+  .entry{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 4px;
+    border-bottom:1px solid var(--line);
+    gap:8px;
+    min-width:0;
+  }
+  .entry-info{
+    min-width:0;
+    overflow-wrap:break-word;
+  }
+  .entry:last-child{ border-bottom:none; }
+  .entry-info .rng{
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .entry-info .ctr{
+    font-size:12.5px;
+    color:var(--slate);
+  }
+  .entry-del{
+    background:none;
+    border:1px solid #e3c9c3;
+    color:var(--danger);
+    border-radius:7px;
+    padding:6px 10px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .empty-state{
+    font-size:13px;
+    color:var(--slate);
+    text-align:center;
+    padding:14px 0;
+  }
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--white);
+    padding:10px 18px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+    white-space:nowrap;
+  }
+  .app-footer{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--slate);
+    padding:18px 16px 8px;
+  }
+  .author-link{
+    color:var(--teal);
+    font-weight:700;
+    text-decoration:none;
+    border-bottom:1px solid rgba(14,110,110,.35);
+  }
+  .author-link:active{ color:var(--teal-dark); }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">DMA Block Reference</div>
+  <h1>Block → Depot</h1>
+</header>
+<div class="stripe"></div>
+
+<main>
+  <div class="search-card">
+    <label for="blockInput">Enter block number</label>
+    <div class="search-row">
+      <input id="blockInput" type="number" inputmode="numeric" placeholder="e.g. 214" autofocus>
+      <button id="searchBtn">Find</button>
+    </div>
+    <div id="result"></div>
+  </div>
+</main>
+
+<footer class="app-footer">
+  © 2026 WDD - Water Management · <a class="author-link" href="mailto:AliH.Jaffar@ewa.bh">Ali Hasan Jaafar</a>
+</footer>
+
+<script>
+// [start, end, depot, contact numbers, office tel]
+const DATA = [[101,113,"Muharraq Depot","36053225 / 17991298",""],[115,122,"Muharraq Depot","36053225 / 17991298",""],[128,128,"Muharraq Depot","36053225 / 17991298",""],[200,200,"Muharraq Depot","36053225 / 17991298",""],[202,217,"Muharraq Depot","36053225 / 17991298",""],[221,229,"Muharraq Depot","36053225 / 17991298",""],[231,237,"Muharraq Depot","36053225 / 17991298",""],[240,248,"Muharraq Depot","36053225 / 17991298",""],[251,258,"Muharraq Depot","36053225 / 17991298",""],[262,266,"Muharraq Depot","36053225 / 17991298",""],[269,269,"Muharraq Depot","36053225 / 17991298",""],[300,346,"Budaiya Depot","36053226 / 17991284",""],[351,351,"Budaiya Depot","36053226 / 17991284",""],[353,354,"Budaiya Depot","36053226 / 17991284",""],[356,369,"Budaiya Depot","36053226 / 17991284",""],[373,373,"Isa Town Depot","36053650 / 17331293",""],[380,382,"Isa Town Depot","36053650 / 17331293",""],[402,402,"Budaiya Depot","36053226 / 17991284",""],[404,408,"Budaiya Depot","36053226 / 17991284",""],[410,414,"Budaiya Depot","36053226 / 17991284",""],[419,419,"Budaiya Depot","36053226 / 17991284",""],[421,426,"Budaiya Depot","36053226 / 17991284",""],[428,428,"Budaiya Depot","36053226 / 17991284",""],[430,436,"Budaiya Depot","36053226 / 17991284",""],[438,439,"Budaiya Depot","36053226 / 17991284",""],[441,441,"Budaiya Depot","36053226 / 17991284",""],[444,444,"Budaiya Depot","36053226 / 17991284",""],[447,447,"Budaiya Depot","36053226 / 17991284",""],[449,450,"Budaiya Depot","36053226 / 17991284",""],[453,458,"Budaiya Depot","36053226 / 17991284",""],[460,460,"Budaiya Depot","36053226 / 17991284",""],[463,463,"Budaiya Depot","36053226 / 17991284",""],[465,465,"Budaiya Depot","36053226 / 17991284",""],[469,469,"Budaiya Depot","36053226 / 17991284",""],[471,471,"Budaiya Depot","36053226 / 17991284",""],[473,473,"Budaiya Depot","36053226 / 17991284",""],[475,475,"Budaiya Depot","36053226 / 17991284",""],[477,477,"Budaiya Depot","36053226 / 17991284",""],[479,479,"Budaiya Depot","36053226 / 17991284",""],[481,481,"Budaiya Depot","36053226 / 17991284",""],[502,502,"Budaiya Depot","36053226 / 17991284",""],[504,509,"Budaiya Depot","36053226 / 17991284",""],[513,515,"Budaiya Depot","36053226 / 17991284",""],[517,518,"Budaiya Depot","36053226 / 17991284",""],[520,531,"Budaiya Depot","36053226 / 17991284",""],[533,533,"Budaiya Depot","36053226 / 17991284",""],[536,545,"Budaiya Depot","36053226 / 17991284",""],[547,547,"Budaiya Depot","36053226 / 17991284",""],[549,553,"Budaiya Depot","36053226 / 17991284",""],[555,555,"Budaiya Depot","36053226 / 17991284",""],[557,557,"Budaiya Depot","36053226 / 17991284",""],[559,559,"Budaiya Depot","36053226 / 17991284",""],[561,561,"Budaiya Depot","36053226 / 17991284",""],[565,565,"Budaiya Depot","36053226 / 17991284",""],[569,569,"Budaiya Depot","36053226 / 17991284",""],[571,571,"Budaiya Depot","36053226 / 17991284",""],[575,575,"Budaiya Depot","36053226 / 17991284",""],[577,577,"Budaiya Depot","36053226 / 17991284",""],[579,579,"Isa Town Depot","36053650 / 17331293",""],[580,590,"Budaiya Depot","36053226 / 17991284",""],[591,591,"Isa Town Depot","36053650 / 17331293",""],[592,592,"Budaiya Depot","36053226 / 17991284",""],[601,609,"Isa Town Depot","36053650 / 17331293",""],[611,611,"Isa Town Depot","36053650 / 17331293",""],[613,616,"Isa Town Depot","36053650 / 17331293",""],[623,626,"Isa Town Depot","36053650 / 17331293",""],[633,636,"Isa Town Depot","36053650 / 17331293",""],[643,646,"Isa Town Depot","36053650 / 17331293",""],[701,702,"Isa Town Depot","36053650 / 17331293",""],[704,709,"Isa Town Depot","36053650 / 17331293",""],[711,716,"Isa Town Depot","36053650 / 17331293",""],[718,718,"Isa Town Depot","36053650 / 17331293",""],[720,721,"Isa Town Depot","36053650 / 17331293",""],[729,730,"Isa Town Depot","36053650 / 17331293",""],[732,734,"Isa Town Depot","36053650 / 17331293",""],[736,736,"Isa Town Depot","36053650 / 17331293",""],[738,738,"Isa Town Depot","36053650 / 17331293",""],[740,740,"Isa Town Depot","36053650 / 17331293",""],[742,746,"Isa Town Depot","36053650 / 17331293",""],[748,748,"Isa Town Depot","36053650 / 17331293",""],[752,752,"Isa Town Depot","36053650 / 17331293",""],[754,754,"Isa Town Depot","36053650 / 17331293",""],[756,756,"Isa Town Depot","36053650 / 17331293",""],[758,758,"Isa Town Depot","36053650 / 17331293",""],[760,760,"Isa Town Depot","36053650 / 17331293",""],[762,762,"Isa Town Depot","36053650 / 17331293",""],[801,810,"Isa Town Depot","36053650 / 17331293",""],[812,816,"Isa Town Depot","36053650 / 17331293",""],[840,841,"Isa Town Depot","36053650 / 17331293",""],[901,919,"Riffa Depot","38999954 / 17991694",""],[920,920,"Isa Town Depot","36053650 / 17331293",""],[921,921,"Riffa Depot","38999954 / 17991694",""],[922,922,"Isa Town Depot","36053650 / 17331293",""],[923,923,"Riffa Depot","38999954 / 17991694",""],[924,924,"Isa Town Depot","36053650 / 17331293",""],[925,925,"Riffa Depot","38999954 / 17991694",""],[926,926,"Isa Town Depot","36053650 / 17331293",""],[927,932,"Riffa Depot","38999954 / 17991694",""],[933,933,"Isa Town Depot","36053650 / 17331293",""],[934,934,"Isa Town Depot","36053650 / 17331293",""],[935,935,"Riffa Depot","38999954 / 17991694",""],[937,937,"Isa Town Depot","36053650 / 17331293",""],[939,939,"Riffa Depot","38999954 / 17991694",""],[941,941,"Isa Town Depot","36053650 / 17331293",""],[942,955,"Riffa Depot","38999954 / 17991694",""],[957,967,"Riffa Depot","38999954 / 17991694",""],[971,971,"Riffa Depot","38999954 / 17991694",""],[973,974,"Riffa Depot","38999954 / 17991694",""],[976,976,"Riffa Depot","38999954 / 17991694",""],[981,983,"Riffa Depot","38999954 / 17991694",""],[985,989,"Riffa Depot","38999954 / 17991694",""],[995,995,"Riffa Depot","38999954 / 17991694",""],[997,999,"Riffa Depot","38999954 / 17991694",""],[1001,1004,"Isa Town Depot","36053650 / 17331293",""],[1006,1006,"Isa Town Depot","36053650 / 17331293",""],[1009,1010,"Isa Town Depot","36053650 / 17331293",""],[1012,1012,"Isa Town Depot","36053650 / 17331293",""],[1014,1014,"Isa Town Depot","36053650 / 17331293",""],[1016,1017,"Isa Town Depot","36053650 / 17331293",""],[1018,1018,"Riffa Depot","38999954 / 17991694",""],[1019,1019,"Isa Town Depot","36053650 / 17331293",""],[1020,1020,"Riffa Depot","38999954 / 17991694",""],[1022,1022,"Isa Town Depot","36053650 / 17331293",""],[1025,1028,"Riffa Depot","38999954 / 17991694",""],[1032,1034,"Riffa Depot","38999954 / 17991694",""],[1037,1038,"Riffa Depot","38999954 / 17991694",""],[1041,1042,"Riffa Depot","38999954 / 17991694",""],[1044,1044,"Riffa Depot","38999954 / 17991694",""],[1046,1046,"Riffa Depot","38999954 / 17991694",""],[1048,1048,"Riffa Depot","38999954 / 17991694",""],[1051,1052,"Riffa Depot","38999954 / 17991694",""],[1054,1058,"Riffa Depot","38999954 / 17991694",""],[1061,1064,"Riffa Depot","38999954 / 17991694",""],[1067,1070,"Riffa Depot","38999954 / 17991694",""],[1089,1089,"Isa Town Depot","36053650 / 17331293",""],[1095,1095,"Isa Town Depot","36053650 / 17331293",""],[1099,1099,"Riffa Depot","38999954 / 17991694",""],[1101,1104,"Riffa Depot","38999954 / 17991694",""],[1106,1113,"Riffa Depot","38999954 / 17991694",""],[1203,1216,"Riffa Depot","38999954 / 17991694",""],[1218,1218,"Riffa Depot","38999954 / 17991694",""]];
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function phones(note, label){
+  return note.split(/[,/]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
+    const dial = s.replace(/[^\d+]/g,'');
+    if(dial.length < 4) return `<span class="phone-plain">${esc(s)}</span>`;
+    return `<a class="phone-link${label ? ' office' : ''}" href="tel:${dial}">${label || '📞'} ${esc(s)}</a>`;
+  }).join('');
+}
+
+function find(){
+  const v = document.getElementById('blockInput').value.trim();
+  const box = document.getElementById('result');
+  if(v === ''){ box.innerHTML = ''; return; }
+  const n = parseInt(v, 10);
+  const e = DATA.find(r => n >= r[0] && n <= r[1]);
+  if(!e){
+    box.innerHTML = `<div class="result-card result-missing"><div class="result-label">No match</div><div class="result-center">Block ${n} isn't in the list</div></div>`;
+    return;
+  }
+  const [s, en, depot, note, office] = e;
+  box.innerHTML = `
+    <div class="result-card result-found">
+      <div class="result-label">Responsible depot</div>
+      <div class="result-center">${esc(depot)}</div>
+      <div class="result-range">${s === en ? 'Block ' + s : 'Blocks ' + s + '–' + en}</div>
+      ${(note || office) ? `<div class="result-note">${note ? phones(note) : ''}${office ? phones(office, '🏢 Office') : ''}</div>` : ''}
+    </div>`;
+}
+
+document.getElementById('searchBtn').addEventListener('click', find);
+document.getElementById('blockInput').addEventListener('keydown', e => { if(e.key === 'Enter') find(); });
+document.getElementById('blockInput').addEventListener('input', () => {
+  if(document.getElementById('blockInput').value.trim() === '') document.getElementById('result').innerHTML = '';
+});
+</script>
+</body>
+</html>
